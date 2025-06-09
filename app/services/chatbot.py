@@ -11,7 +11,16 @@ OR_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemma-7b-it")
 LOCAL_URL = os.getenv("LOCAL_MODEL_URL", "http://localhost:11434/api/chat")
 LOCAL_MODEL = os.getenv("LOCAL_MODEL_NAME", "gemma")
 
-def get_ai_response(query: str) -> str:
+def get_ai_response(query: str, history: list[tuple[str, str]]) -> str:
+    # Construir el historial para el modelo
+    messages = []
+    for q, a in history:
+        messages.append({"role": "user", "content": q})
+        messages.append({"role": "assistant", "content": a})
+    
+    # Añadir la nueva pregunta
+    messages.append({"role": "user", "content": query})
+
     if AI_PROVIDER == "openrouter":
         headers = {
             "Authorization": f"Bearer {OR_API_KEY}",
@@ -20,7 +29,7 @@ def get_ai_response(query: str) -> str:
         }
         data = {
             "model": OR_MODEL,
-            "messages": [{"role": "user", "content": query}]
+            "messages": messages
         }
         response = requests.post("https://openrouter.ai/api/v1/chat/completions", json=data, headers=headers)
         if response.status_code == 200:
@@ -31,7 +40,7 @@ def get_ai_response(query: str) -> str:
         headers = {"Content-Type": "application/json"}
         data = {
             "model": LOCAL_MODEL,
-            "messages": [{"role": "user", "content": query}],
+            "messages": messages,
             "stream": False
         }
         response = requests.post(LOCAL_URL, json=data, headers=headers)
