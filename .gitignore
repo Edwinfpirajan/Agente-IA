@@ -1,0 +1,40 @@
+# Entorno virtual
+venv/
+ENV/
+env/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Compilaciones de Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Archivos de log
+*.log
+
+# Archivos temporales de editor
+*.swp
+*.swo
+*.bak
+*~
+
+# Configuración de PyCharm / VS Code
+.idea/
+.vscode/
+
+# Archivos de entorno y configuración sensible
+.env
+.env.*
+
+# Base de datos local
+*.sqlite3
+*.db
+
+# Archivos comprimidos o temporales
+*.zip
+*.tar
+*.gz
