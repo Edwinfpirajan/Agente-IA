@@ -34,11 +34,10 @@ def ask_question(payload: AskRequest, db: Session = Depends(get_db)):
         question = payload.query
         user_id = payload.user_id
         service = "ALPHA"
+        model_type = payload.model_type or "local"
 
-        # Obtener o crear sesión
         session_obj = get_or_create_session(db, user_id=user_id, service=service)
 
-        # Recuperar historial
         history_records = (
             db.query(models.Conversation)
             .filter_by(session_id=session_obj.id)
@@ -47,21 +46,22 @@ def ask_question(payload: AskRequest, db: Session = Depends(get_db)):
         )
         history = [(conv.question, conv.answer) for conv in history_records]
 
-        # Obtener respuesta con historial
-        answer = get_ai_response(question, history)
+        # Obtener respuesta con modelo seleccionado
+        result = get_ai_response(question, history, user_id=user_id, model_type=model_type)
 
-        # Guardar la conversación
+        # Guardar conversación
         convo = models.Conversation(
             question=question,
-            answer=answer,
+            answer=result["answer"],
             session_id=session_obj.id,
-            service=service
+            service=service,
+            model_ai=result["model_used"]
         )
         db.add(convo)
         db.commit()
         db.refresh(convo)
 
-        return {"question": question, "answer": answer}
+        return {"question": question, "answer": result["answer"]}
 
     except Exception as e:
         db.rollback()

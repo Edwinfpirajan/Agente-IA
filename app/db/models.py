@@ -25,3 +25,4 @@ class Conversation(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     session = relationship("Session", back_populates="conversations")
+    model_ai = Column(String(50), nullable=True)
