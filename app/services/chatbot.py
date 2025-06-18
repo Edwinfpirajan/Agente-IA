@@ -28,88 +28,84 @@ def ensure_local_model_loaded():
     else:
         raise Exception(f"[Local] No se pudo verificar modelos locales: {response.text}")
 
-def get_ai_response(query: str, history: list[tuple[str, str]], user_id: str = "anon", model_type: str = None) -> dict:
+def get_ai_response(
+    query: str, 
+    history: list[tuple[str, str]], 
+    user_id: str = "anon", 
+    provider: str = None, 
+    model: str = None
+) -> dict:
     messages = []
     for q, a in history:
         messages.append({"role": "user", "content": q})
         messages.append({"role": "assistant", "content": a})
 
     messages.append({"role": "user", "content": query})
-    chosen_provider = model_type or AI_PROVIDER
-
+    chosen_provider = provider or AI_PROVIDER
 
     # OPENROUTER
     if chosen_provider == "openrouter":
+        model_name = model or OR_MODEL
         headers = {
             "Authorization": f"Bearer {OR_API_KEY}",
             "HTTP-Referer": "http://localhost",
             "Content-Type": "application/json",
         }
         data = {
-            "model": OR_MODEL,
+            "model": model_name,
             "messages": [
-                {
-                    "role": "system",
-                    "content": (
-                        f"Estás interactuando con el usuario identificado con documento {user_id}. "
-                        "Tienes acceso al historial completo de la conversación."
-                    )
-                }
+                {"role": "system", "content": f"Estás interactuando con el usuario identificado con documento {user_id}."}
             ] + messages
         }
         response = requests.post("https://openrouter.ai/api/v1/chat/completions", json=data, headers=headers)
         if response.status_code == 200:
             return {
                 "answer": response.json()["choices"][0]["message"]["content"],
-                "model_used": OR_MODEL
+                "model_used": model_name
             }
         return {
             "answer": f"[OpenRouter] Error: {response.status_code} {response.text}",
-            "model_used": OR_MODEL
+            "model_used": model_name
         }
 
     # GROQ
     elif chosen_provider == "groq":
+        model_name = model or GROQ_MODEL
         headers = {
             "Authorization": f"Bearer {GROQ_API_KEY}",
             "Content-Type": "application/json",
         }
         data = {
-            "model": GROQ_MODEL,
+            "model": model_name,
             "messages": [
-                {
-                    "role": "system",
-                    "content": (
-                        f"Estás interactuando con el usuario identificado con documento {user_id}. "
-                        "Tienes acceso al historial completo de la conversación."
-                    )
-                }
+                {"role": "system", "content": f"Estás interactuando con el usuario identificado con documento {user_id}."}
             ] + messages
         }
         response = requests.post("https://api.groq.com/openai/v1/chat/completions", json=data, headers=headers)
         if response.status_code == 200:
             return {
                 "answer": response.json()["choices"][0]["message"]["content"],
-                "model_used": GROQ_MODEL
+                "model_used": model_name
             }
         return {
             "answer": f"[Groq] Error: {response.status_code} {response.text}",
-            "model_used": GROQ_MODEL
+            "model_used": model_name
         }
 
     # LOCAL
     elif chosen_provider == "local":
+        model_name = model or LOCAL_MODEL
         try:
             ensure_local_model_loaded()
         except Exception as e:
             return {
                 "answer": f"[Local] Error al cargar modelo: {str(e)}",
-                "model_used": LOCAL_MODEL
+                "model_used": model_name
             }
 
         headers = {"Content-Type": "application/json"}
         data = {
-            "model": LOCAL_MODEL,
+            "model": model_name,
             "messages": messages,
             "stream": False
         }
@@ -118,12 +114,12 @@ def get_ai_response(query: str, history: list[tuple[str, str]], user_id: str = "
             response_data = response.json()
             return {
                 "answer": response_data["message"]["content"],
-                "model_used": LOCAL_MODEL
+                "model_used": model_name
             }
-        except Exception as e:
+        except Exception:
             return {
                 "answer": f"[Local] Formato de respuesta inesperado: {response.text}",
-                "model_used": LOCAL_MODEL
+                "model_used": model_name
             }
 
     # Proveedor no válido

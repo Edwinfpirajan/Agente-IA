@@ -4,7 +4,8 @@ from typing import Optional
 class AskRequest(BaseModel):
     query: str
     user_id: str
-    model_type: Optional[str]
+    provider: Optional[str]
+    model: Optional[str] = None 
 class AskResponse(BaseModel):
     question: str
     answer: str

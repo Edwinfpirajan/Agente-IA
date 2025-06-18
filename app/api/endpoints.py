@@ -34,7 +34,8 @@ def ask_question(payload: AskRequest, db: Session = Depends(get_db)):
         question = payload.query
         user_id = payload.user_id
         service = "ALPHA"
-        model_type = payload.model_type or "local"
+        provider = payload.provider or "local"
+        model = payload.model  # <-- Nuevo parámetro
 
         session_obj = get_or_create_session(db, user_id=user_id, service=service)
 
@@ -46,10 +47,8 @@ def ask_question(payload: AskRequest, db: Session = Depends(get_db)):
         )
         history = [(conv.question, conv.answer) for conv in history_records]
 
-        # Obtener respuesta con modelo seleccionado
-        result = get_ai_response(question, history, user_id=user_id, model_type=model_type)
+        result = get_ai_response(question, history, user_id=user_id, provider=provider, model=model)
 
-        # Guardar conversación
         convo = models.Conversation(
             question=question,
             answer=result["answer"],
@@ -66,3 +65,9 @@ def ask_question(payload: AskRequest, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+    
+@router.get("/health")
+def health_check():
+    return {"status": "ok", "message": "El servidor y la api funcionan correctamente."}
+# app/api/endpoints.py
