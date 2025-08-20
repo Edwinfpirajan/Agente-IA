@@ -161,41 +161,5 @@ def health_check():
 
 
 
-@router.post("/transcribe/")
-async def transcribe(file: UploadFile = File(...)):
-    try:
-        with open("temp.mp3", "wb") as temp_file:
-            content = await file.read()
-            temp_file.write(content)
-
-        text = transcribe_and_cleanup("temp.mp3")
-        return {"transcription": text}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/analyze-image/")
-async def analyze_image_with_openai(image_content: bytes = File(...)):
-    """Analyzes an image using the OpenAI Vision API."""
-    base64_image = base64.b64encode(image_content).decode("utf-8")
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Describe esta imagen"},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}},
-                    ],
-                }
-            ],
-            max_tokens=300,
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error communicating with OpenAI: {e}")
-
-
 
 

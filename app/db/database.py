@@ -16,13 +16,10 @@ MYSQL_PORT = os.getenv("MYSQL_PORT", "3306")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
 
 # Construir la URL de conexión a MySQL
-# DATABASE_URL = (
-#     f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}"
-# )
-
 DATABASE_URL = (
-    "postgresql://postgres.xwutxdcmkrmzqierontf:kevin123@aws-0-us-east-2.pooler.supabase.com:6543/postgres"
+    f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}"
 )
+
 
 # Crear el engine de SQLAlchemy
 engine = create_engine(DATABASE_URL, echo=True, pool_pre_ping=True)
