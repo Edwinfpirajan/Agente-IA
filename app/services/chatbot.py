@@ -65,7 +65,7 @@ def faiss_tool(question: str) -> str:
     embeddings = OpenAIEmbeddings(openai_api_key=os.getenv("OPENAI_API_KEY"))
     vectorstore = FAISS.load_local("vectorstore_clientes", embeddings, allow_dangerous_deserialization=True)
 
-    retriever = vectorstore.as_retriever(k=3)
+    retriever = vectorstore.as_retriever(k=2)
 
     docs = retriever.get_relevant_documents(question)
 
@@ -91,7 +91,7 @@ prompt = ChatPromptTemplate.from_messages(
             PROMPT_BOT_BICO.format(
                 context="{context}",
                 question="{question}",
-                phone="{phone}"
+                messagges="{messages}"
             )
         ),
         HumanMessagePromptTemplate.from_template("{question}"),
