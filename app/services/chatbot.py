@@ -6,6 +6,7 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_core.tools import tool
 from app.prompts.prompt_bico import PROMPT_BOT_BICO
 from app.services.models import get_langchain_model
+from app.conections.Apis_test import rickmorty_characters
 from pydantic import Field
 from langchain.prompts.chat import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from typing import List, Union
@@ -23,9 +24,10 @@ class AgentState(MessagesState):
     model_used: str 
     steps: int
     remaining_steps: int
+    species: str 
 
-def get_answer_for_agent(question: str, history: list[tuple[str, str]], model_used: str ,phone: str = "anon") -> dict:
-    state = get_agent_state_from_history(history, phone=phone, question=question, model_used=model_used)
+def get_answer_for_agent(question: str, history: list[tuple[str, str]], model_used: str, phone: str = "anon", species: str = None) -> dict:
+    state = get_agent_state_from_history(history, phone=phone, question=question, model_used=model_used, species=species)
     result_state = agent_graph.invoke(state)
 
     return {
@@ -34,12 +36,15 @@ def get_answer_for_agent(question: str, history: list[tuple[str, str]], model_us
         "model_used": result_state["model_used"],
     }
 
-def get_agent_state_from_history(history: list[tuple[str, str]], question: str, phone: str, model_used: str) -> AgentState:
+def get_agent_state_from_history(history: list[tuple[str, str]], question: str, phone: str, model_used: str, species: str) -> AgentState:
     messages = []
 
     for user_msg, bot_msg in history:
         messages.append(HumanMessage(content=user_msg))
         messages.append(AIMessage(content=bot_msg))
+
+        if len(messages) > 14:  
+            messages = messages[-14:]
 
     context = faiss_tool(question)
 
@@ -53,7 +58,8 @@ def get_agent_state_from_history(history: list[tuple[str, str]], question: str, 
         model_used=model_used,
         answer="",
         steps=0,
-        remaining_steps=5
+        remaining_steps=5,
+        species=""  
     )
 
 @tool
@@ -91,7 +97,8 @@ prompt = ChatPromptTemplate.from_messages(
             PROMPT_BOT_BICO.format(
                 context="{context}",
                 question="{question}",
-                messagges="{messages}"
+                messagges="{messages}",
+                species="{species}"
             )
         ),
         HumanMessagePromptTemplate.from_template("{question}"),
@@ -102,7 +109,7 @@ llm = get_langchain_model(provider="openai", model="gpt-4.1-2025-04-14")
 
 agent = create_react_agent(
 model=llm,
-tools=[faiss_tool],
+tools=[faiss_tool , rickmorty_characters],
 prompt=prompt,
 state_schema=AgentState,
 )

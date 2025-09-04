@@ -95,14 +95,18 @@ async def ask_question(
     try:
         session_obj = get_or_create_session(db, phone=user_phone, service=service)
 
-        # Obtener historial
         history_records = (
             db.query(models.Conversation)
             .filter_by(session_id=session_obj.id)
-            .order_by(models.Conversation.created_at.asc())
+            .order_by(models.Conversation.created_at.desc())  # más recientes primero
+            .limit(5)  # últimas 5
             .all()
         )
+        
+        history_records.reverse()
+
         history = [(conv.question, conv.answer) for conv in history_records]
+
 
         result = get_answer_for_agent(
             question=input_text,
