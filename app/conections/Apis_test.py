@@ -11,8 +11,7 @@ def rickmorty_characters(endpoint: str) -> str:
     url = f"https://rickandmortyapi.com/api/{endpoint}"
     resp = httpx.get(url)
     data = resp.json()
-    AgentState.species = data['species']
-    return data['name']
+    return data
 
 
 

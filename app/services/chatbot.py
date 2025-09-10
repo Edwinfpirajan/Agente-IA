@@ -1,4 +1,4 @@
-from langchain.schema import HumanMessage, SystemMessage, AIMessage
+﻿from langchain.schema import HumanMessage, SystemMessage, AIMessage
 from langchain_community.vectorstores import FAISS
 from langgraph.prebuilt import create_react_agent
 from langgraph.graph import StateGraph, START, END, MessagesState
@@ -15,6 +15,8 @@ import os
 AI_PROVIDER = os.getenv("AI_PROVIDER", "local")
 LOCAL_MODEL = os.getenv("LOCAL_MODEL", "tinyllama")
 
+
+
 class AgentState(MessagesState):  
     phone: str
     question: str
@@ -24,10 +26,9 @@ class AgentState(MessagesState):
     model_used: str 
     steps: int
     remaining_steps: int
-    species: str 
 
-def get_answer_for_agent(question: str, history: list[tuple[str, str]], model_used: str, phone: str = "anon", species: str = None) -> dict:
-    state = get_agent_state_from_history(history, phone=phone, question=question, model_used=model_used, species=species)
+def get_answer_for_agent(question: str, history: list[tuple[str, str]], model_used: str, phone: str = "anon") -> dict:
+    state = get_agent_state_from_history(history, phone=phone, question=question, model_used=model_used)
     result_state = agent_graph.invoke(state)
 
     return {
@@ -36,7 +37,7 @@ def get_answer_for_agent(question: str, history: list[tuple[str, str]], model_us
         "model_used": result_state["model_used"],
     }
 
-def get_agent_state_from_history(history: list[tuple[str, str]], question: str, phone: str, model_used: str, species: str) -> AgentState:
+def get_agent_state_from_history(history: list[tuple[str, str]], question: str, phone: str, model_used: str) -> AgentState:
     messages = []
 
     for user_msg, bot_msg in history:
@@ -58,8 +59,7 @@ def get_agent_state_from_history(history: list[tuple[str, str]], question: str, 
         model_used=model_used,
         answer="",
         steps=0,
-        remaining_steps=5,
-        species=""  
+        remaining_steps=5, 
     )
 
 @tool
@@ -98,7 +98,6 @@ prompt = ChatPromptTemplate.from_messages(
                 context="{context}",
                 question="{question}",
                 messagges="{messages}",
-                species="{species}"
             )
         ),
         HumanMessagePromptTemplate.from_template("{question}"),
@@ -115,17 +114,40 @@ state_schema=AgentState,
 )
 
 def agent_node(state: AgentState) -> AgentState:
-    result = agent.invoke(state)
-    return AgentState(
-        phone=result["phone"],
-        question=result["question"],
-        messages=result["messages"],
-        context=result["context"],
-        model_used=result["model_used"],
-        answer=result["messages"][-1].content,
-        steps=result["steps"] + 1,
-        remaining_steps=result["remaining_steps"] - 1
-    )
+    # Limita la recursión interna del agente para evitar bucles
+    try:
+        result = agent.invoke(state, config={"recursion_limit": 6})
+        return AgentState(
+            phone=result["phone"],
+            question=result["question"],
+            messages=result["messages"],
+            context=result["context"],
+            model_used=result["model_used"],
+            answer=result["messages"][-1].content,
+            steps=result["steps"] + 1,
+            remaining_steps=result["remaining_steps"] - 1
+        )
+    except Exception:
+        # Fallback sin herramientas para evitar 500 si el agente entra en loop
+        sys_msg = SystemMessage(content=PROMPT_BOT_BICO.format(
+            context=state.context,
+            question=state.question,
+            messagges=state.messages,
+            species=state.species,
+        ))
+        human_msg = HumanMessage(content=state.question)
+        ai = llm.invoke([sys_msg, human_msg])
+        messages = state.messages + [human_msg, AIMessage(content=ai.content)]
+        return AgentState(
+            phone=state.phone,
+            question=state.question,
+            messages=messages,
+            context=state.context,
+            model_used=state.model_used,
+            answer=ai.content,
+            steps=state.steps + 1,
+            remaining_steps=max(0, state.remaining_steps - 1)
+        )
 
 builder = StateGraph(AgentState)
 builder.add_node("agent_node",agent_node )
